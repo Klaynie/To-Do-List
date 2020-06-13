@@ -12,7 +12,9 @@ class Table(Base):
     deadline = Column(Date, default=datetime.today())
  
     def __repr__(self):
-        return self.string_field
+        return self.task
 
 engine = create_engine('sqlite:///todo.db?check_same_thread=False')
-Base.metadata.create_all(engine)
+
+if __name__ == "__main__":
+    Base.metadata.create_all(engine)
