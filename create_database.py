@@ -6,13 +6,13 @@ from datetime import datetime
 Base = declarative_base()
 
 class Table(Base):
-    __tablename__ = 'table_name'
+    __tablename__ = 'task'
     id = Column(Integer, primary_key=True)
-    string_field = Column(String, default='default_value')
-    date_field = Column(Date, default=datetime.today())
+    task = Column(String)
+    deadline = Column(Date, default=datetime.today())
  
     def __repr__(self):
         return self.string_field
 
-engine = create_engine('sqlite:///file_name?check_same_thread=False')
+engine = create_engine('sqlite:///todo.db?check_same_thread=False')
 Base.metadata.create_all(engine)
