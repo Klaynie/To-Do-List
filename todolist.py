@@ -26,13 +26,9 @@ class MenuItem(IntEnum):
     TODAY = 1
     WEEK = 2
     ALL_TASKS = 3
-    ADD_TASK = 4
-
-
-class TaskColumn(IntEnum):
-    ID = 0
-    TASK = 1
-    DEADLINE = 2
+    MISSED_TASKS = 4
+    ADD_TASK = 5
+    DELETE_TASK = 6
 
 
 engine = create_engine('sqlite:///todo.db?check_same_thread=False')
@@ -67,6 +63,55 @@ def get_database_rows(session, date):
     return session.query(Table).filter(Table.deadline == date).all()
 
 
+def get_tasks_to_delete_list(session, date):
+    result_set = get_missed_tasks(session, date)
+    print('\n')
+    if len(result_set) == 0:
+        print("Nothing to delete")
+    else:
+        print("Chose the number of the task you want to delete:")
+        for counter, item in enumerate(result_set, 1):
+            task = item[1]
+            deadline = item[2]
+            print(str(counter) + '.', task + '.', datetime.strftime(deadline, '%d %b'))
+    print('\n')
+
+
+def get_missed_tasks(session, date):
+    table = get_database_table(session)
+    connection = engine.connect()
+    metadata = db.MetaData()
+    query = db.select([table]).where(table.c.deadline < date).order_by(table.c.deadline, table.c.id)
+    result_proxy = connection.execute(query)
+    result_set = result_proxy.fetchall()
+    return result_set
+
+
+def get_missed_task_list(session, date):
+    result_set = get_missed_tasks(session, date)
+    print('\n')
+    print("Missed tasks:")
+    if len(result_set) == 0:
+        print("Nothing is missed!")
+    else:
+        for counter, item in enumerate(result_set, 1):
+            task = item[1]
+            deadline = item[2]
+            print(str(counter) + '.', task + '.', datetime.strftime(deadline, '%d %b'))
+    print('\n')
+
+
+def delete_task(session, date, user_number):
+    result_set = get_missed_tasks(session, date)
+    user_number_2_id_dict = {}
+    for counter, item in enumerate(result_set, 1):
+        id = item[0]
+        user_number_2_id_dict[user_number] = id
+    session.query(Table).filter(Table.id == user_number_2_id_dict[user_number]).delete()
+    session.commit()
+    print("The task has been deleted!")
+    print("\n")
+
 def get_date():
     return datetime.now().date()
 
@@ -78,15 +123,20 @@ def get_database_table(session):
     return db.Table('task', metadata, autoload=True, autoload_with=engine)
 
 
-def get_all_task_list(session):
+def get_all_tasks(session):
     table = get_database_table(session)
     connection = engine.connect()
     metadata = db.MetaData()
     query = db.select([table]).order_by(table.c.deadline, table.c.id)
     result_proxy = connection.execute(query)
     result_set = result_proxy.fetchall()
+    return result_set
+
+
+def get_all_task_list(session):
+    result_set = get_all_tasks(session)
     print('\n')
-    print("All tasks: ")
+    print("All tasks:")
     for counter, item in enumerate(result_set, 1):
         task = item[1]
         deadline = item[2]
@@ -129,7 +179,9 @@ def get_menu_text():
     result = "1) Today's tasks\n" \
              "2) Week's tasks\n" \
              "3) All tasks\n" \
-             "4) Add task\n" \
+             "4) Missed tasks\n" \
+             "5) Add task\n" \
+             "6) Delete task\n" \
              "0) Exit"
     return result
 
@@ -142,8 +194,15 @@ def input_handler(session, date):
         get_week_task_list(session, date)
     elif action == MenuItem.ALL_TASKS:
         get_all_task_list(session)
+    elif action == MenuItem.MISSED_TASKS:
+        get_missed_task_list(session, date)
     elif action == MenuItem.ADD_TASK:
         set_task(session)
+    elif action == MenuItem.DELETE_TASK:
+        get_tasks_to_delete_list(session, date)
+        if len(get_missed_tasks(session, date)) != 0:
+            task_to_delete_number = int(input())
+            delete_task(session, date, task_to_delete_number)
     elif action == MenuItem.EXIT:
         exit()
 
