@@ -95,10 +95,10 @@ def get_all_task_list(session):
 
 
 def get_week_task_list(session, date):
-    for delta_days in range(7):
-        date = date + timedelta(days=delta_days)
+    for delta_days in range(8):
         rows = get_database_rows(session, date)
         generate_task_message(rows, date)
+        date = date + timedelta(days=1)
 
 
 def get_today_task_list(session, date):
@@ -119,16 +119,10 @@ def generate_task_message(rows, date, today=False):
         print(f"Today {datetime.strftime(date, '%d %b')}:" if today else f"{datetime.strftime(date, '%A %d %b')}")
         for counter, task in enumerate(rows, 1):
             print(str(counter) + '.', task)
-    print('\n')
 
 
 def get_menu_entry():
-    result = ''
-    try:
-        result = int(input())
-    except Exception:
-        print("Please enter the item number!")
-    return result
+    return int(input())
 
 
 def get_menu_text():
