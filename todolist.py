@@ -41,9 +41,11 @@ keep_going = True
 def exit():
     global keep_going
     keep_going = False
-    print('\n')
-    print('Bye!')
-    return None
+    print('\nBye!')
+
+
+def convert_string_to_datetime(string):
+    return datetime.strptime(string, '%Y-%m-%d') # YYYY-MM-DD
 
 
 def set_task(session):
@@ -51,26 +53,23 @@ def set_task(session):
     user_input_task = input()
     print("Enter deadline")
     user_input_deadline = input()
-    user_input_deadline = datetime.strptime(user_input_deadline, '%Y-%m-%d')
+    user_input_deadline = convert_string_to_datetime(user_input_deadline)
     new_row = Table(task=user_input_task, deadline=user_input_deadline)
     session.add(new_row)
     session.commit()
     print("The task has been added")
-    return None
 
 
 def get_database_rows(session, date):
     return session.query(Table).filter(Table.deadline == date).all()
 
-
-def get_tasks_to_delete_list(session, date):
-    result_set = get_missed_tasks(session, date)
+def print_tasks_to_delete_list(table):
     print('\n')
-    if len(result_set) == 0:
+    if len(table) == 0:
         print("Nothing to delete")
     else:
         print("Chose the number of the task you want to delete:")
-        for counter, item in enumerate(result_set, 1):
+        for counter, item in enumerate(table, 1):
             task = item[1]
             deadline = item[2]
             print(str(counter) + '.', task + '.', datetime.strftime(deadline, '%d %b'))
@@ -100,17 +99,32 @@ def get_missed_task_list(session, date):
             print(str(counter) + '.', task + '.', datetime.strftime(deadline, '%d %b'))
     print('\n')
 
-
-def delete_task(session, date, user_number):
-    result_set = get_missed_tasks(session, date)
-    user_number_2_id_dict = {}
-    for counter, item in enumerate(result_set, 1):
-        id = item[0]
-        user_number_2_id_dict[user_number] = id
-    session.query(Table).filter(Table.id == user_number_2_id_dict[user_number]).delete()
+def delet_row(session, id_to_delete):
+    session.query(Table).filter(Table.id == id_to_delete).delete()
     session.commit()
+
+def generate_user_number_2_id_dict(task_list):
+    result = {}
+    for counter, item in enumerate(task_list, 1):
+        task_id = item[0]
+        result[counter] = task_id
+    return result
+
+def delete_task(session, task_list, user_number):
+    user_number_2_id_dict = generate_user_number_2_id_dict(task_list)
+    id_to_delete = user_number_2_id_dict[user_number]
+    delet_row(session, id_to_delete)
     print("The task has been deleted!")
     print("\n")
+
+
+def task_deletion(session, date):
+    task_list = get_missed_tasks(session, date)
+    print_tasks_to_delete_list(task_list)
+    if len(task_list) != 0:
+        task_to_delete_number = int(input())
+        delete_task(session, task_list, task_to_delete_number)
+
 
 def get_date():
     return datetime.now().date()
@@ -199,10 +213,7 @@ def input_handler(session, date):
     elif action == MenuItem.ADD_TASK:
         set_task(session)
     elif action == MenuItem.DELETE_TASK:
-        get_tasks_to_delete_list(session, date)
-        if len(get_missed_tasks(session, date)) != 0:
-            task_to_delete_number = int(input())
-            delete_task(session, date, task_to_delete_number)
+        task_deletion(session, date)
     elif action == MenuItem.EXIT:
         exit()
 
