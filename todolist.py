@@ -30,6 +30,9 @@ class MenuItem(IntEnum):
     ADD_TASK = 5
     DELETE_TASK = 6
 
+class TaskListOptions(IntEnum):
+    TASK = 1
+    DEADLINE = 2
 
 engine = create_engine('sqlite:///todo.db?check_same_thread=False')
 Base.metadata.create_all(engine)
@@ -63,18 +66,6 @@ def set_task(session):
 def get_database_rows(session, date):
     return session.query(Table).filter(Table.deadline == date).all()
 
-def print_tasks_to_delete_list(table):
-    print('\n')
-    if len(table) == 0:
-        print("Nothing to delete")
-    else:
-        print("Chose the number of the task you want to delete:")
-        for counter, item in enumerate(table, 1):
-            task = item[1]
-            deadline = item[2]
-            print(str(counter) + '.', task + '.', datetime.strftime(deadline, '%d %b'))
-    print('\n')
-
 
 def get_missed_tasks(session, date):
     table = get_database_table(session)
@@ -85,23 +76,21 @@ def get_missed_tasks(session, date):
     result_set = result_proxy.fetchall()
     return result_set
 
-
 def get_missed_task_list(session, date):
-    result_set = get_missed_tasks(session, date)
+    table = get_missed_tasks(session, date)
     print('\n')
     print("Missed tasks:")
-    if len(result_set) == 0:
+    if len(table) == 0:
         print("Nothing is missed!")
     else:
-        for counter, item in enumerate(result_set, 1):
-            task = item[1]
-            deadline = item[2]
-            print(str(counter) + '.', task + '.', datetime.strftime(deadline, '%d %b'))
+        print_missed_task_list(table)
     print('\n')
+
 
 def delet_row(session, id_to_delete):
     session.query(Table).filter(Table.id == id_to_delete).delete()
     session.commit()
+
 
 def generate_user_number_2_id_dict(task_list):
     result = {}
@@ -116,6 +105,23 @@ def delete_task(session, task_list, user_number):
     delet_row(session, id_to_delete)
     print("The task has been deleted!")
     print("\n")
+
+
+def print_missed_task_list(table):
+    for counter, item in enumerate(table, 1):
+            task = item[int(TaskListOptions.TASK)]
+            deadline = item[int(TaskListOptions.DEADLINE)]
+            print(str(counter) + '.', task + '.', datetime.strftime(deadline, '%d %b'))
+
+
+def print_tasks_to_delete_list(table):
+    print('\n')
+    if len(table) == 0:
+        print("Nothing to delete")
+    else:
+        print("Chose the number of the task you want to delete:")
+        print_missed_task_list(table)
+    print('\n')
 
 
 def task_deletion(session, date):
@@ -173,14 +179,17 @@ def get_today_task_list(session, date):
 
 def generate_task_message(rows, date, today=False):
     print('\n')
+    message = "Nothing to do!"
+    date_string_today = f"Today {datetime.strftime(date, '%d %b')}"
+    other_date_string = f"{datetime.strftime(date, '%A %d %b')}"
     if len(rows) == 0:
         if today:
-            print("Nothing to do!")
+            print(message)
         else:
-            print(f"{datetime.strftime(date, '%A %d %b')}")
-            print("Nothing to do!")
+            print(other_date_string)
+            print(message)
     else:
-        print(f"Today {datetime.strftime(date, '%d %b')}:" if today else f"{datetime.strftime(date, '%A %d %b')}")
+        print(date_string_today if today else other_date_string)
         for counter, task in enumerate(rows, 1):
             print(str(counter) + '.', task)
 
