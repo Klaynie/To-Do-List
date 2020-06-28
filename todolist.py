@@ -66,14 +66,17 @@ def set_task(session):
 def get_database_rows(session, date):
     return session.query(Table).filter(Table.deadline == date).all()
 
+def get_result_set(query):
+    connection = engine.connect()
+    metadata = db.MetaData()
+    result_proxy = connection.execute(query)
+    result = result_proxy.fetchall()
+    return result
 
 def get_missed_tasks(session, date):
     table = get_database_table(session)
-    connection = engine.connect()
-    metadata = db.MetaData()
     query = db.select([table]).where(table.c.deadline < date).order_by(table.c.deadline, table.c.id)
-    result_proxy = connection.execute(query)
-    result_set = result_proxy.fetchall()
+    result_set = get_result_set(query)
     return result_set
 
 def get_missed_task_list(session, date):
@@ -83,7 +86,7 @@ def get_missed_task_list(session, date):
     if len(table) == 0:
         print("Nothing is missed!")
     else:
-        print_missed_task_list(table)
+        print_task_list(table)
     print('\n')
 
 
@@ -107,7 +110,7 @@ def delete_task(session, task_list, user_number):
     print("\n")
 
 
-def print_missed_task_list(table):
+def print_task_list(table):
     for counter, item in enumerate(table, 1):
             task = item[int(TaskListOptions.TASK)]
             deadline = item[int(TaskListOptions.DEADLINE)]
@@ -120,7 +123,7 @@ def print_tasks_to_delete_list(table):
         print("Nothing to delete")
     else:
         print("Chose the number of the task you want to delete:")
-        print_missed_task_list(table)
+        print_task_list(table)
     print('\n')
 
 
@@ -145,11 +148,8 @@ def get_database_table(session):
 
 def get_all_tasks(session):
     table = get_database_table(session)
-    connection = engine.connect()
-    metadata = db.MetaData()
     query = db.select([table]).order_by(table.c.deadline, table.c.id)
-    result_proxy = connection.execute(query)
-    result_set = result_proxy.fetchall()
+    result_set = get_result_set(query)
     return result_set
 
 
@@ -157,10 +157,7 @@ def get_all_task_list(session):
     result_set = get_all_tasks(session)
     print('\n')
     print("All tasks:")
-    for counter, item in enumerate(result_set, 1):
-        task = item[1]
-        deadline = item[2]
-        print(str(counter) + '.', task + '.', datetime.strftime(deadline, '%d %b'))
+    print_task_list(result_set)
     print('\n')
 
 
@@ -174,7 +171,6 @@ def get_week_task_list(session, date):
 def get_today_task_list(session, date):
     rows = get_database_rows(session, date)
     generate_task_message(rows, date, today=True)
-    return None
 
 
 def generate_task_message(rows, date, today=False):
